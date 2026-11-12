@@ -163,7 +163,10 @@ elif tab == "Organic Lens":
     st.title("Organic Lens")
     st.caption("¿La conversación nació sola o fue sembrada? No dice si una afirmación es falsa: "
                "muestra señales de amplificación coordinada.")
-    order = rn.sort_values("coord", ascending=False).index
+    early = (df[df.narrativa != ""].sort_values("fecha").groupby("narrativa").head(20)
+             .assign(c=lambda x: x.grupo != "").groupby("narrativa").c.mean())
+    order = (rn.assign(early=early.reindex(rn.index).fillna(0))
+             .sort_values(["early", "coord"], ascending=False).index)
     nid = st.selectbox("Narrativa", order, format_func=lambda x: f"{label(x)}  ·  {rn.loc[x, 'coord']:.1%} coordinado")
     L = D.ojo_organico(df, nid)
     c = st.columns(4)

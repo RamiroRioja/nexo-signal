@@ -10,6 +10,22 @@ python -m nexo --datos datos/practica --salida salida/practica
 python evaluacion/puntuar.py --verdad datos/practica/verdad --entrega salida/practica
 ```
 
+Se admite Python 3.10–3.13. Las dependencias tienen ruedas precompiladas para Windows x86_64, Linux x86_64 (glibc 2.28 o posterior) y macOS arm64 (12 o posterior). Se recomienda instalar en un entorno virtual:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+En Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
 Para preparar el modelo multilingüe local antes de una corrida sin conexión:
 
 ```bash
@@ -32,6 +48,8 @@ DuckDB, pandas, NumPy, scikit-learn, NetworkX, PyTorch y Sentence Transformers s
 
 `python scripts/verificar_robustez.py` ejecuta una corrida pequeña para comprobar textos vacíos, fechas inválidas, respuestas huérfanas, ciclos, IDs duplicados y la unión de cuentas.
 
+La ejecución fija las semillas de Python, NumPy, scikit-learn, NetworkX y PyTorch, usa algoritmos deterministas de PyTorch cuando están disponibles y limita BLAS, DuckDB y PyTorch a 8 hilos fijos. El modelo y los vectores se guardan en cachés locales; el caché de embeddings se identifica por modelo y hash de texto y no cambia los resultados.
+
 ## Dashboard
 
 ```bash
@@ -39,3 +57,26 @@ streamlit run dashboard/app.py -- --datos datos/practica --salida salida/practic
 ```
 
 El pipeline escribe `tiempos.json` junto con las entregas para mostrar la duración medida de cada etapa.
+
+## Reproducir la entrega
+
+En Linux/macOS:
+
+```bash
+python -m pip install -r requirements.txt
+bash scripts/descargar_final.sh
+python scripts/verificar_entrada.py --datos datos/final
+python -m nexo --datos datos/final --salida entrega
+python scripts/verificar_entrega.py --entrega entrega --datos datos/final
+```
+
+En Windows PowerShell, reemplaza el descargador Bash por su equivalente Python:
+
+```powershell
+python scripts/descargar_final.py
+python scripts/verificar_entrada.py --datos datos/final
+python -m nexo --datos datos/final --salida entrega
+python scripts/verificar_entrega.py --entrega entrega --datos datos/final
+```
+
+El set de práctica de 200.000 comentarios se procesó en aproximadamente 2,9 minutos con el modelo ya en caché y 5 minutos en una corrida limpia que lo descarga, en una máquina con 8 CPU lógicas, 31 GB de RAM y sin GPU. La ejecución usa CPU y 8 hilos fijos para reproducir las salidas; el tiempo exacto figura en `entrega/costo.json`.
