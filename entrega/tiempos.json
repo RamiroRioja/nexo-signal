@@ -1,0 +1,7 @@
+{
+  "Ingesta de datos y Parquet": 1.48,
+  "Normalización, frases genéricas y detección de ruido": 15.83,
+  "Representación textual y agrupamiento": 106.05,
+  "Detección de coordinación y archivos de entrega": 44.75,
+  "Tablas DuckDB y conteos horarios": 0.98
+}

@@ -1,0 +1,10 @@
+{
+  "comentarios_procesados": 150000,
+  "segundos": 169.1,
+  "tokens_ia": 0,
+  "usd_ia": 0.0,
+  "usd_por_mil_comentarios": 0.0,
+  "hardware": "x86_64; 8 CPU lógicos; 31.3 GB RAM; sin GPU",
+  "almacenamiento": "DuckDB local sobre Parquet",
+  "notas": "Embeddings locales (MiniLM + n-gramas de caracteres); sin llamadas externas ni IA generativa; semillas fijas; 8 hilos fijos."
+}
