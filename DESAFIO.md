@@ -88,9 +88,9 @@ Las corridas de práctica van a `salida/`, que no se sube al repo. La carpeta `e
 
 ## Cómo se entrega
 
-1. El viernes 13 se publica el set final. Descárguenlo en `datos/final/`, que no se sube al repo.
+1. El jueves 12 a las 17 se publica el set final en [Releases](https://github.com/qualydata-org/desafio-qualydata/releases/tag/set-final). Descarguen los cuatro archivos en `datos/final/`, que no se sube al repo.
 2. Corran su pipeline sobre el set final y dejen el resultado en la carpeta `entrega/`, en la raíz de su repo.
-3. Commiteen y pusheen `entrega/` antes del cierre.
+3. Commiteen y pusheen `entrega/` y el código que la generó antes del cierre: viernes 13 a las 10.
 4. Carguen el proyecto en la plataforma del hackathon (Hacki) con el link al repositorio público y un video de demo.
 
 Lo que se puntúa es lo que está en el repo a la hora de cierre. Al cierre, la organización clona cada repo y anota el commit; lo que se suba después no cuenta.
@@ -169,7 +169,7 @@ Detalles de postura:
 **Requisitos excluyentes:**
 - Entrega el día 3 en Hacki: repositorio público con `entrega/` commiteada, video de demo y pitch ante el jurado.
 - El README del equipo explica cómo correr el pipeline, dónde guardan los datos y por qué eligieron esa base, y qué código o librerías existían antes del evento.
-- El pipeline corre de punta a punta con un comando sobre el set final. No se permite etiquetar a mano el set final; el jurado puede volver a correrlo.
+- El pipeline corre de punta a punta con un comando sobre el set final. No se permite etiquetar a mano el set final ni editar a mano la entrega. A los equipos del podio el jurado les vuelve a correr ese comando sobre el set final: si el resultado no se parece al entregado, quedan afuera. Fijen las semillas aleatorias; si usan IA, se aceptan diferencias menores.
 - Trabajo original hecho durante el hackathon. Se pueden usar librerías, modelos y servicios públicos.
 - Solo los datos provistos o fuentes públicas, sin datos personales.
 - Sin claves ni secretos en el repositorio.
@@ -183,8 +183,8 @@ Detalles de postura:
 | Día | Qué pasa |
 |---|---|
 | Miércoles 11 | Apertura y formación de equipos. Exploración de los datos y primera versión del pipeline. |
-| Jueves 12 | Mejoras, detección de coordinación y visualización. Mentorías. |
-| Viernes 13 | A la mañana se publica el set final; el horario se confirma en el evento. Cada equipo corre su pipeline, pushea `entrega/` y carga el proyecto en Hacki antes del cierre. Después, pitch ante el jurado. |
+| Jueves 12 | Mejoras, detección de coordinación y visualización. Mentorías. A las 17 se publica el set final. |
+| Viernes 13 | Cierre a las 10: cada equipo pushea `entrega/` y carga el proyecto en Hacki. Después, pitch ante el jurado. |
 
 ## Pistas
 
