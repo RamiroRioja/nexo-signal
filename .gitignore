@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+salida/
+datos/final/
+.DS_Store
+modelos/

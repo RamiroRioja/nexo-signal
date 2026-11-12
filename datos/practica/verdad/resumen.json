@@ -1,0 +1,29 @@
+{
+  "escenario": "practica",
+  "dias": 14,
+  "publicaciones": 506,
+  "comentarios": 200000,
+  "cuentas": 15991,
+  "comentarios_ruido": 37710,
+  "comentarios_campana": 645,
+  "cuentas_campana": {
+    "C1": 60,
+    "C2": 30,
+    "C3": 25
+  },
+  "por_narrativa": {
+    "L1": 18463,
+    "L4": 11331,
+    "L3": 9462,
+    "L2": 16163,
+    "H1": 16474,
+    "H2": 14501,
+    "B2": 16605,
+    "B1": 15608,
+    "H4": 12538,
+    "B3": 11848,
+    "H3": 3513,
+    "L5": 7158,
+    "B4": 8626
+  }
+}

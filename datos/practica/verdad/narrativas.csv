@@ -1,0 +1,14 @@
+narrativa_id,tema,titulo,frases_clave,emergente,fecha_origen,publicacion_origen,cambia_redaccion_desde_dia,impulsada_por,comentarios
+L1,litio,La mina se queda con el agua del pueblo,agua|pozos secos|vegas|bombeo|ganado,no,2026-09-01T07:32:46-03:00,p00001,8,,18463
+L2,litio,El litio trae trabajo para los jóvenes,trabajo|jóvenes|puestos|futuro|proveedores locales,no,2026-09-01T07:35:56-03:00,p00001,,C1,16163
+L3,litio,Las regalías del litio no quedan en la provincia,regalías|se lo llevan|migajas|exportan,no,2026-09-01T07:33:56-03:00,p00001,,,9462
+L4,litio,No hubo consulta previa a las comunidades,consulta previa|comunidades|licencia social|audiencia,no,2026-09-01T07:32:57-03:00,p00001,,C2,11331
+L5,litio,Hubo un derrame en el salar y lo están ocultando,derrame|pileta|ocultan|tapan,si,2026-09-07T08:17:26-03:00,p00212,,,7158
+B1,colectivo,El aumento del boleto es impagable,aumento|boleto|sueldos|no llego,no,2026-09-01T08:32:27-03:00,p00004,,,15608
+B2,colectivo,Las empresas cobran subsidios y el servicio es pésimo,subsidios|servicio|colectivos rotos|demoras,no,2026-09-01T08:31:08-03:00,p00004,,,16605
+B3,colectivo,Hay que llamar a licitación y cambiar de empresas,licitación|otras empresas|competencia,no,2026-09-01T08:52:12-03:00,p00004,,,11848
+B4,colectivo,Van a eliminar líneas de colectivo de los barrios,sacan líneas|barrios|recorridos|audio,si,2026-09-10T21:32:05-03:00,p00318,,,8626
+H1,hospital,La obra del hospital está parada y la plata desapareció,obra parada|se robaron|plata|nunca lo terminan,no,2026-09-01T08:14:41-03:00,p00003,,,16474
+H2,hospital,Faltan médicos: un edificio nuevo no alcanza,faltan médicos|enfermeros|guardia|nombramientos,no,2026-09-01T08:18:53-03:00,p00003,,,14501
+H3,hospital,"El hospital se inaugura en campaña, solo para la foto",para la foto|campaña|elecciones|cortar la cinta,si,2026-09-06T01:12:04-03:00,p00177,,C3,3513
+H4,hospital,Los turnos en el hospital tardan meses,turnos|meses de espera|fila|especialistas,no,2026-09-01T08:48:22-03:00,p00003,,,12538
