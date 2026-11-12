@@ -64,9 +64,11 @@ def is_short_agreement(text: str) -> bool:
     return any(SequenceMatcher(None, text, phrase).ratio() >= 0.84 for phrase in SHORT_AGREEMENTS)
 
 
-def log_stage(name: str, started: float) -> float:
+def log_stage(name: str, started: float, timings: dict[str, float] | None = None) -> float:
     elapsed = time.perf_counter() - started
     print(f"[{name}] listo en {elapsed:.1f}s", flush=True)
+    if timings is not None:
+        timings[name] = round(elapsed, 2)
     return elapsed
 
 
@@ -164,6 +166,33 @@ def strip_fillers(text: str, prefixes: set[tuple[str, ...]], suffixes: set[tuple
                 changed = True
                 break
     return " ".join(tokens)
+
+
+def clean_original_body(
+    value: object, prefixes: set[tuple[str, ...]], suffixes: set[tuple[str, ...]]
+) -> str:
+    raw = "" if value is None or pd.isna(value) else str(value)
+    raw = re.sub(r"https?://\S+|www\.\S+", " ", raw, flags=re.I)
+    raw = re.sub(r"(?<!\w)@[\w.]+", " ", raw)
+    raw = re.sub(r"(?<!\w)#[\w]+", " ", raw)
+    raw = "".join(
+        " " if unicodedata.category(char) in {"So", "Sk", "Cs"} or char in {"\u200d", "\ufe0f"}
+        else char for char in raw
+    )
+    spans = list(re.finditer(r"[^\W_]+", raw, flags=re.UNICODE))
+    normalized_tokens = [
+        re.sub(r"([a-z0-9])\1{2,}", r"\1\1", fold_accents(match.group()))
+        for match in spans
+    ]
+    body_tokens = strip_fillers(" ".join(normalized_tokens), prefixes, suffixes).split()
+    if body_tokens:
+        for start in range(len(normalized_tokens) - len(body_tokens) + 1):
+            end = start + len(body_tokens)
+            if normalized_tokens[start:end] == body_tokens:
+                return raw[spans[start].start():spans[end - 1].end()].strip(
+                    " \t\r\n.,;:!?¡¿\"'“”‘’-—…"
+                )
+    return " ".join(raw.split()).strip(" \t\r\n.,;:!?¡¿\"'“”‘’-—…")
 
 
 def extract_features(text: str) -> tuple[int, int, int]:
@@ -438,14 +467,48 @@ def assign_stances(frame: pd.DataFrame, micro_labels: np.ndarray, narrative_labe
                         colors[neighbor] = expected
                         queue.append(neighbor)
         if len(set(colors.values())) == 1 and len(clusters) > 1:
-            midpoint = sorted(earliest.values())[len(earliest) // 2]
-            colors = {cluster: int(earliest[cluster] > midpoint) for cluster in clusters}
+            ordered_by_time = sorted(clusters, key=lambda cluster: (earliest[cluster], cluster))
+            split = max(1, len(ordered_by_time) // 2)
+            colors = {cluster: int(position >= split)
+                      for position, cluster in enumerate(ordered_by_time)}
         support_cluster = min(clusters, key=lambda cluster: earliest[cluster])
-        reject_cluster = max(clusters, key=lambda cluster: marker_share[cluster])
-        if marker_share[reject_cluster] >= 0.20 and reject_cluster != support_cluster:
-            colors[reject_cluster] = 1 - colors[support_cluster]
+        side_counts, marker_counts = Counter(), Counter()
         for cluster in clusters:
-            cluster_stance[cluster] = "apoya" if colors.get(cluster, 0) == colors[support_cluster] else "rechaza"
+            color = colors.get(cluster, 0)
+            for idx in cluster_rows[cluster]:
+                side_counts[color] += 1
+                text = frame.iloc[idx]["norm"]
+                marker_counts[color] += any(marker in text for marker in REFUTATION_MARKERS)
+        marker_rates = {
+            color: marker_counts[color] / max(1, side_counts[color])
+            for color in (0, 1)
+        }
+        reject_color = max((0, 1), key=lambda color: marker_rates[color])
+        marker_signal = (
+            marker_counts[reject_color] >= max(5, math.ceil(sum(side_counts.values()) * 0.002))
+            and marker_rates[reject_color] - marker_rates[1 - reject_color] >= 0.02
+        )
+        if marker_signal:
+            support_color = 1 - reject_color
+        else:
+            timestamps = [
+                timestamp for cluster in clusters for timestamp in frame.iloc[cluster_rows[cluster]]["ts"].dropna()
+            ]
+            early_counts = Counter()
+            if timestamps:
+                cutoff = min(timestamps) + pd.Timedelta(hours=6)
+                for cluster in clusters:
+                    color = colors.get(cluster, 0)
+                    early_counts[color] += sum(
+                        timestamp <= cutoff
+                        for timestamp in frame.iloc[cluster_rows[cluster]]["ts"].dropna()
+                    )
+            if early_counts[0] != early_counts[1]:
+                support_color = max((0, 1), key=lambda color: early_counts[color])
+            else:
+                support_color = colors.get(support_cluster, 0)
+        for cluster in clusters:
+            cluster_stance[cluster] = "apoya" if colors.get(cluster, 0) == support_color else "rechaza"
     return cluster_stance
 
 
@@ -523,7 +586,17 @@ def narrative_outputs(frame: pd.DataFrame, labels: list[str], stances: list[str]
                 keywords = [str(terms[i]) for i in np.argsort(-means) if str(terms[i]) not in STOPWORDS][:8]
             except ValueError:
                 pass
-            title = min(texts.tolist(), key=lambda value: (abs(len(value) - 70), value))[:180]
+            body_counts = texts.value_counts()
+            most_frequent_body = body_counts.index[0]
+            variants = support.loc[support["norm"] == most_frequent_body, "title_body"]
+            title_counts = variants[variants.str.len() > 0].value_counts()
+            if not title_counts.empty:
+                title = max(
+                    title_counts.items(),
+                    key=lambda item: (
+                        int(item[1]), item[0][:1].isupper(), len(item[0]), item[0]
+                    ),
+                )[0][:180]
         if pd.notna(origin):
             origin = origin.tz_convert("-03:00")
             origin_text = origin.isoformat()
@@ -655,10 +728,13 @@ def account_features(comments: pd.DataFrame, accounts: pd.DataFrame) -> tuple[di
         narrative_focus = float(labels.value_counts(normalize=True).iloc[0]) if len(labels) else 0.0
         score = 1.5 * recent_share + 1.25 * min(1.0, duplicate_share * 3)
         score += max(0.0, night_share - global_night * 1.5) + min(1.0, reply_share * 2)
-        flagged = density >= 0.10 and score >= 1.2 and (
-            recent_share >= 0.25 or duplicate_share >= 0.10
-            or (reply_share >= 0.15 and night_share >= global_night) or narrative_focus >= 0.85
+        evidence_gate = (
+            recent_share >= 0.25
+            or (reply_share >= 0.15 and night_share >= global_night)
+            or narrative_focus >= 0.85
+            or (duplicate_share >= 0.10 and night_share >= global_night * 1.5)
         )
+        flagged = density >= 0.10 and score >= 1.2 and evidence_gate
         evidence = {
             "cuentas": len(members), "comentarios": len(rows), "coactividad_density": round(density, 4),
             "cuentas_recientes_share": round(recent_share, 4),
@@ -697,6 +773,7 @@ def main() -> None:
     parser.add_argument("--embedding", choices=("auto", "minilm", "char"), default="auto")
     args = parser.parse_args()
     overall_start = time.perf_counter()
+    timings: dict[str, float] = {}
     args.salida.mkdir(parents=True, exist_ok=True)
     cache_dir = args.salida / "data"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -712,7 +789,7 @@ def main() -> None:
     comments = con.execute("SELECT * FROM comments_source").df()
     accounts = con.execute("SELECT * FROM accounts_source").df()
     con.execute("SELECT COUNT(*) FROM posts_source").fetchone()
-    log_stage("ingesta DuckDB + Parquet", stage)
+    log_stage("Ingesta de datos y Parquet", stage, timings)
 
     stage = time.perf_counter()
     for column in ("comentario_id", "publicacion_id", "cuenta_id", "fecha", "texto", "respuesta_a", "me_gusta"):
@@ -725,6 +802,9 @@ def main() -> None:
     comments["hashtags"] = [item[1] for item in normalized]
     prefixes, suffixes = detect_fillers(comments.loc[comments["norm"].ne(""), "norm"].tolist())
     comments["norm"] = comments["norm"].map(lambda value: strip_fillers(value, prefixes, suffixes))
+    comments["title_body"] = comments["texto"].map(
+        lambda value: clean_original_body(value, prefixes, suffixes)
+    )
     comments["ts"] = pd.to_datetime(comments["fecha"], errors="coerce", utc=True)
     comments["is_reply"] = comments["respuesta_a"].ne("")
     comments["is_noise"] = False
@@ -737,7 +817,7 @@ def main() -> None:
     unique_texts = sorted(set(comments.loc[embedding_rows, "norm"]) - {""})
     text_to_position = {text: idx for idx, text in enumerate(unique_texts)}
     comments["text_position"] = comments["norm"].map(text_to_position).fillna(-1).astype(int)
-    log_stage("normalización, fillers y ruido", stage)
+    log_stage("Normalización, frases genéricas y detección de ruido", stage, timings)
 
     stage = time.perf_counter()
     features, embedding_choice = make_features(unique_texts, args.embedding, model_root)
@@ -772,7 +852,7 @@ def main() -> None:
             stances[idx] = cluster_stances.get(micro_labels[idx], "apoya")
     stances = propagate_reply_stances(comments, labels, stances)
     assigned, narrative_table = narrative_outputs(comments, labels, stances)
-    log_stage(f"embeddings/clustering ({embedding_choice})", stage)
+    log_stage("Representación textual y agrupamiento", stage, timings)
 
     stage = time.perf_counter()
     if "cuenta_id" not in accounts:
@@ -796,7 +876,7 @@ def main() -> None:
         args.salida / "narrativas.csv", index=False
     )
     account_rows.to_csv(args.salida / "cuentas.csv", index=False)
-    log_stage("coordinación y archivos de entrega", stage)
+    log_stage("Detección de coordinación y archivos de entrega", stage, timings)
 
     stage = time.perf_counter()
     assigned["hour"] = assigned["ts"].dt.floor("h")
@@ -817,7 +897,7 @@ def main() -> None:
     con.execute(f"COPY narratives TO {sql_path(cache_dir / 'narratives.parquet')} (FORMAT PARQUET, COMPRESSION ZSTD)")
     con.execute(f"COPY groups TO {sql_path(cache_dir / 'groups.parquet')} (FORMAT PARQUET, COMPRESSION ZSTD)")
     con.execute(f"COPY hourly_counts TO {sql_path(cache_dir / 'hourly_counts.parquet')} (FORMAT PARQUET, COMPRESSION ZSTD)")
-    log_stage("tablas DuckDB y agregados horarios", stage)
+    log_stage("Tablas DuckDB y conteos horarios", stage, timings)
     elapsed = time.perf_counter() - overall_start
     cost = {
         "comentarios_procesados": int(len(comments)), "segundos": round(elapsed, 2),
@@ -826,6 +906,9 @@ def main() -> None:
         "notas": f"Embeddings locales ({embedding_choice}); sin llamadas a servicios ni IA generativa; semillas fijas.",
     }
     (args.salida / "costo.json").write_text(json.dumps(cost, ensure_ascii=False, indent=2), encoding="utf-8")
+    (args.salida / "tiempos.json").write_text(
+        json.dumps(timings, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     con.close()
     print(f"Listo: {len(narrative_table)} narrativas, {len(set(coordinated.values()))} grupos coordinados, {elapsed:.1f}s")
 

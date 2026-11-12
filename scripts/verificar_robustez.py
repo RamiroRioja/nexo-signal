@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,9 @@ from collections import Counter
 from pathlib import Path
 
 import duckdb
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from nexo.pipeline import clean_original_body
 
 
 def write_csv(path: Path, columns: list[str], rows: list[dict[str, str]]) -> None:
@@ -28,6 +32,10 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
+    title_body = clean_original_body(
+        "A ver, La reunión salió bien. Despierten 😡", {("a", "ver")}, {("despierten",)}
+    )
+    assert title_body == "La reunión salió bien", "Los títulos deben conservar texto original sin fillers ni emojis."
     with tempfile.TemporaryDirectory(prefix="nexo-robustez-") as temp:
         base = Path(temp)
         data_dir, output_dir = base / "datos", base / "salida"
@@ -128,6 +136,9 @@ def main() -> None:
         expected_accounts = {row["cuenta_id"] for row in comments + accounts}
         actual_accounts = {row["cuenta_id"] for row in read_csv(output_dir / "cuentas.csv")}
         assert actual_accounts == expected_accounts, "La entrega debe incluir la unión de cuentas."
+        timings = json.loads((output_dir / "tiempos.json").read_text(encoding="utf-8"))
+        assert timings and all(isinstance(value, (int, float)) for value in timings.values())
+        assert all(name[0].isupper() for name in timings), "Las etapas deben tener nombres en español."
 
         con = duckdb.connect(str(output_dir / "nexo.duckdb"), read_only=True)
         try:

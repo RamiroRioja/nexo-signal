@@ -31,3 +31,11 @@ DuckDB, pandas, NumPy, scikit-learn, NetworkX, PyTorch y Sentence Transformers s
 `make eval` puntúa la práctica y ejecuta la evaluación de generalización por tema y por últimos diez días. Las semillas están fijadas; los resultados de la corrida y los intermedios quedan en la carpeta indicada.
 
 `python scripts/verificar_robustez.py` ejecuta una corrida pequeña para comprobar textos vacíos, fechas inválidas, respuestas huérfanas, ciclos, IDs duplicados y la unión de cuentas.
+
+## Dashboard
+
+```bash
+streamlit run dashboard/app.py -- --datos datos/practica --salida salida/practica
+```
+
+El pipeline escribe `tiempos.json` junto con las entregas para mostrar la duración medida de cada etapa.
